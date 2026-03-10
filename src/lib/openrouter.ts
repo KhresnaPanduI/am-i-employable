@@ -1,5 +1,7 @@
 import { ZodType } from "zod";
 
+import { collectNormalizationDiffs } from "@/lib/output-diagnostics";
+
 type OpenRouterTextPart = {
   type: "text";
   text: string;
@@ -93,6 +95,24 @@ function extractJsonPayload(raw: string) {
   return cleaned;
 }
 
+function getChoiceFinishReason(payload: unknown) {
+  if (
+    payload &&
+    typeof payload === "object" &&
+    "choices" in payload &&
+    Array.isArray(payload.choices) &&
+    payload.choices[0] &&
+    typeof payload.choices[0] === "object" &&
+    payload.choices[0] !== null &&
+    "finish_reason" in payload.choices[0] &&
+    typeof payload.choices[0].finish_reason === "string"
+  ) {
+    return payload.choices[0].finish_reason;
+  }
+
+  return undefined;
+}
+
 export function encodePdfDataUrl(buffer: Buffer) {
   return `data:application/pdf;base64,${buffer.toString("base64")}`;
 }
@@ -163,5 +183,20 @@ export async function callOpenRouterJson<T>({
   }
 
   const parsed = JSON.parse(extractJsonPayload(rawContent));
-  return schema.parse(parsed);
+  const normalized = schema.parse(parsed);
+  const finishReason = getChoiceFinishReason(payload);
+  const normalizationDiffs = collectNormalizationDiffs(parsed, normalized);
+
+  if (finishReason === "length" || normalizationDiffs.length > 0) {
+    console.warn("[openrouter] Output diagnostics", {
+      label,
+      model,
+      finishReason,
+      rawContentLength: rawContent.length,
+      normalizationDiffCount: normalizationDiffs.length,
+      normalizationDiffs: normalizationDiffs.slice(0, 12),
+    });
+  }
+
+  return normalized;
 }
