@@ -11,7 +11,8 @@
 
   --ink: #111111;
   --ink-secondary: #555555;
-  --ink-muted: #999999;
+  --ink-muted: #666666;
+  --ink-label: #4b5563;
 
   --accent: #7c3aed;
   --accent-hover: #6d28d9;
@@ -378,12 +379,14 @@ p {
    ────────────────────────────────────────────── */
 
 .score-gauge {
-  display: inline-flex;
+  display: flex;
+  width: 100%;
   flex-direction: column;
-  gap: 4px;
-  padding: 20px 24px;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 30px 32px;
   border-radius: var(--radius-lg);
-  margin-bottom: 16px;
+  margin-bottom: 4px;
 }
 
 .score-gauge--strong {
@@ -405,15 +408,16 @@ p {
 .score-label {
   font-family: var(--font-mono), monospace;
   font-size: 0.75rem;
-  letter-spacing: 0.06em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ink-muted);
+  color: var(--ink-label);
 }
 
 .score-value {
   font-family: var(--font-body), system-ui, sans-serif;
   font-weight: 800;
-  font-size: clamp(3rem, 8vw, 4.5rem);
+  font-size: clamp(4.1rem, 13vw, 6.25rem);
   line-height: 0.9;
   letter-spacing: -0.03em;
 }
@@ -452,11 +456,25 @@ p {
 
 .result-hero {
   display: grid;
-  gap: 16px;
+  gap: 18px;
+}
+
+.result-hero__summary {
+  display: grid;
+  gap: 10px;
+}
+
+.result-hero__label {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-label);
 }
 
 .result-hero h2 {
-  font-size: clamp(1.3rem, 3vw, 1.6rem);
+  font-size: clamp(1.2rem, 2.6vw, 1.45rem);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -505,9 +523,10 @@ p {
 .diagnosis-item__label {
   font-family: var(--font-mono), monospace;
   font-size: 0.72rem;
-  letter-spacing: 0.05em;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--ink-muted);
+  color: var(--ink-label);
 }
 
 .diagnosis-item__value {
@@ -592,9 +611,10 @@ p {
 .alignment-group__label {
   font-family: var(--font-mono), monospace;
   font-size: 0.72rem;
-  letter-spacing: 0.05em;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--ink-muted);
+  color: var(--ink-label);
 }
 
 /* ──────────────────────────────────────────────
@@ -623,9 +643,10 @@ p {
   margin-bottom: 8px;
   font-family: var(--font-mono), monospace;
   font-size: 0.72rem;
-  letter-spacing: 0.05em;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--ink-muted);
+  color: var(--ink-label);
 }
 
 .rewrite-card p {
@@ -688,9 +709,10 @@ p {
   margin-bottom: 4px;
   font-family: var(--font-mono), monospace;
   font-size: 0.7rem;
-  letter-spacing: 0.05em;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--ink-muted);
+  color: var(--ink-label);
 }
 
 .share-card__item-value {
@@ -772,3 +794,4 @@ p {
     font-size: 3rem;
   }
 }
+

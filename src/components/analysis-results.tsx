@@ -274,12 +274,17 @@ export function AnalysisResults({
       <div className="card">
         <div className="result-hero">
           <ScoreGauge score={result.score} label={label} caption={caption} />
-          <h2>{result.verdict}</h2>
-          <p className="lede">
-            {isJobFitResult(result)
-              ? result.gapAnalysis
-              : result.recruiterFirstImpression}
-          </p>
+          <div className="result-hero__summary">
+            <span className="result-hero__label">
+              {isJobFitResult(result) ? "Gap analysis" : "Recruiter first impression"}
+            </span>
+            <h2>{result.verdict}</h2>
+            <p className="lede">
+              {isJobFitResult(result)
+                ? result.gapAnalysis
+                : result.recruiterFirstImpression}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -306,3 +311,4 @@ export function AnalysisResults({
     </section>
   );
 }
+
