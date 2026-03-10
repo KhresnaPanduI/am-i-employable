@@ -123,7 +123,8 @@ export async function callOpenRouterJson<T>({
   label,
   plugins,
   temperature = 0.8,
-}: CallOpenRouterJsonOptions<T>) {
+  max_tokens = 2500,
+}: CallOpenRouterJsonOptions<T> & { max_tokens?: number }) {
   const apiKey = requireEnv("OPENROUTER_API_KEY");
   const model = requireEnv("OPENROUTER_MODEL");
 
@@ -137,6 +138,7 @@ export async function callOpenRouterJson<T>({
     body: JSON.stringify({
       model,
       temperature,
+      max_tokens,
       response_format: {
         type: "json_object",
       },
