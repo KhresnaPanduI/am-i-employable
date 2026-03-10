@@ -7,6 +7,12 @@ const PAGE_MARKER_PATTERN = /--\s*\d+\s+of\s+\d+\s*--/gi;
 const LOW_CONFIDENCE_CHAR_THRESHOLD = 320;
 const globalPdfRuntime = globalThis as Record<string, unknown>;
 
+export type PdfExtractionStage =
+  | "ensure-canvas-runtime"
+  | "load-pdf-parse-module"
+  | "create-parser"
+  | "extract-text";
+
 type PdfParseModule = {
   PDFParse: new (options: { data: Buffer }) => {
     getText: () => Promise<{
@@ -24,9 +30,18 @@ type CanvasRuntimeModule = {
 };
 
 export class PdfExtractionError extends Error {
-  constructor(message: string) {
+  stage?: PdfExtractionStage;
+  causeMessage?: string;
+
+  constructor(
+    message: string,
+    options?: { stage?: PdfExtractionStage; cause?: unknown },
+  ) {
     super(message);
     this.name = "PdfExtractionError";
+    this.stage = options?.stage;
+    this.causeMessage =
+      options?.cause instanceof Error ? options.cause.message : undefined;
   }
 }
 
@@ -39,7 +54,16 @@ function ensureCanvasRuntime() {
     return;
   }
 
-  const canvas = require("@napi-rs/canvas") as CanvasRuntimeModule;
+  let canvas: CanvasRuntimeModule;
+
+  try {
+    canvas = require("@napi-rs/canvas") as CanvasRuntimeModule;
+  } catch (error) {
+    throw new PdfExtractionError("Failed to initialize the PDF canvas runtime.", {
+      stage: "ensure-canvas-runtime",
+      cause: error,
+    });
+  }
 
   if (needsDomMatrix && canvas.DOMMatrix) {
     globalPdfRuntime["DOMMatrix"] = canvas.DOMMatrix;
@@ -56,7 +80,15 @@ function ensureCanvasRuntime() {
 
 function loadPdfParseModule() {
   ensureCanvasRuntime();
-  return require("pdf-parse") as PdfParseModule;
+
+  try {
+    return require("pdf-parse") as PdfParseModule;
+  } catch (error) {
+    throw new PdfExtractionError("Failed to load the PDF parsing module.", {
+      stage: "load-pdf-parse-module",
+      cause: error,
+    });
+  }
 }
 
 export function sanitizeExtractedText(rawText: string) {
@@ -76,7 +108,16 @@ function getQualityWarning(text: string, pageCount: number) {
 
 export async function extractCvTextFromBuffer(buffer: Buffer): Promise<ParsedCv> {
   const { PDFParse } = loadPdfParseModule();
-  const parser = new PDFParse({ data: buffer });
+  let parser: InstanceType<PdfParseModule["PDFParse"]> | null = null;
+
+  try {
+    parser = new PDFParse({ data: buffer });
+  } catch (error) {
+    throw new PdfExtractionError("Failed to create the PDF parser instance.", {
+      stage: "create-parser",
+      cause: error,
+    });
+  }
 
   try {
     const result = await parser.getText();
@@ -86,6 +127,7 @@ export async function extractCvTextFromBuffer(buffer: Buffer): Promise<ParsedCv>
     if (!text) {
       throw new PdfExtractionError(
         "We could open the PDF, but it did not contain enough readable text.",
+        { stage: "extract-text" },
       );
     }
 
@@ -104,13 +146,25 @@ export async function extractCvTextFromBuffer(buffer: Buffer): Promise<ParsedCv>
       error instanceof Error
         ? error.message
         : "We couldn't parse that PDF. Try another file or paste the CV text.",
+      {
+        stage: "extract-text",
+        cause: error,
+      },
     );
   } finally {
-    await parser.destroy();
+    if (parser) {
+      await parser.destroy().catch((destroyError) => {
+        console.warn("[pdf] Failed to destroy parser instance", {
+          message:
+            destroyError instanceof Error
+              ? destroyError.message
+              : String(destroyError),
+        });
+      });
+    }
   }
 }
 
 export function isPdfUpload(fileName: string, mimeType?: string) {
   return fileName.toLowerCase().endsWith(".pdf") || mimeType === "application/pdf";
 }
-

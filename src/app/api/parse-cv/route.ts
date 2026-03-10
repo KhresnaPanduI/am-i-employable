@@ -6,7 +6,16 @@ export const runtime = "nodejs";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
+function getStackPreview(error: unknown) {
+  if (!(error instanceof Error) || !error.stack) {
+    return undefined;
+  }
+
+  return error.stack.split("\n").slice(0, 4).join("\n");
+}
+
 export async function POST(request: Request) {
+  let routeStage = "read-form-data";
   const formData = await request.formData();
   const file = formData.get("file");
 
@@ -32,15 +41,23 @@ export async function POST(request: Request) {
   }
 
   try {
+    routeStage = "read-array-buffer";
     const buffer = Buffer.from(await file.arrayBuffer());
+
+    routeStage = "extract-cv-text";
     const parsedCv = await extractCvTextFromBuffer(buffer);
 
     return NextResponse.json(parsedCv);
   } catch (error) {
     console.error("[parse-cv] Failed to extract PDF text", {
+      routeStage,
+      extractionStage: error instanceof PdfExtractionError ? error.stage : undefined,
+      causeMessage: error instanceof PdfExtractionError ? error.causeMessage : undefined,
       fileName: file.name,
+      fileType: file.type,
       fileSize: file.size,
       message: error instanceof Error ? error.message : String(error),
+      stackPreview: getStackPreview(error),
     });
 
     const message =
