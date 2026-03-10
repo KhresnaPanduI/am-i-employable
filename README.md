@@ -5,7 +5,7 @@ A bold, light-themed Next.js app that scores a CV in two modes:
 - `How Employable Am I?` for general interview-readiness
 - `How Employable Am I for This Job?` for CV-vs-job-description matching
 
-The app accepts PDF CV uploads, extracts text server-side, sends structured prompts through OpenRouter, and returns a dramatic but useful diagnosis plus actionable rewrites.
+The app accepts PDF CV uploads, extracts text server-side when possible, and automatically falls back to OpenRouter PDF OCR for image-based or low-confidence PDFs. It returns a dramatic but useful diagnosis plus actionable rewrites.
 
 ## Stack
 
@@ -14,6 +14,7 @@ The app accepts PDF CV uploads, extracts text server-side, sends structured prom
 - OpenRouter for LLM access
 - Vercel-ready deployment
 - `pdf-parse` for server-side PDF extraction
+- OpenRouter PDF + `mistral-ocr` fallback for scanned/image PDFs
 - `html-to-image` for downloadable PNG share cards
 - Vitest for core schema, route, and parsing tests
 
@@ -37,9 +38,9 @@ The app accepts PDF CV uploads, extracts text server-side, sends structured prom
 - `/` landing page with both modes
 - `/general` general CV diagnosis
 - `/job-fit` job-fit diagnosis
-- `POST /api/parse-cv` PDF text extraction
-- `POST /api/analyze/general` general employability analysis
-- `POST /api/analyze/job-fit` job-fit analysis
+- `POST /api/parse-cv` local PDF text extraction and confidence hinting
+- `POST /api/analyze/general` general employability analysis from text or PDF OCR fallback
+- `POST /api/analyze/job-fit` job-fit analysis from text or PDF OCR fallback
 
 ## Testing
 
@@ -53,7 +54,7 @@ The tests cover:
 
 - schema validation and score ranges
 - PDF extraction for valid, blank, and invalid files
-- analysis helper behavior
+- analysis helper behavior for text and OCR-backed PDF requests
 - API route validation and upstream failure handling
 
 ## Deployment

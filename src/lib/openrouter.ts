@@ -1,14 +1,37 @@
 import { ZodType } from "zod";
 
-type OpenRouterMessage = {
+type OpenRouterTextPart = {
+  type: "text";
+  text: string;
+};
+
+type OpenRouterFilePart = {
+  type: "file";
+  file: {
+    filename: string;
+    file_data: string;
+  };
+};
+
+export type OpenRouterContentPart = OpenRouterTextPart | OpenRouterFilePart;
+
+export type OpenRouterMessage = {
   role: "system" | "user";
-  content: string;
+  content: string | OpenRouterContentPart[];
+};
+
+type OpenRouterPlugin = {
+  id: "file-parser";
+  pdf: {
+    engine: "pdf-text" | "mistral-ocr" | "native";
+  };
 };
 
 type CallOpenRouterJsonOptions<T> = {
   schema: ZodType<T>;
   messages: OpenRouterMessage[];
   label: string;
+  plugins?: OpenRouterPlugin[];
   temperature?: number;
 };
 
@@ -70,10 +93,15 @@ function extractJsonPayload(raw: string) {
   return cleaned;
 }
 
+export function encodePdfDataUrl(buffer: Buffer) {
+  return `data:application/pdf;base64,${buffer.toString("base64")}`;
+}
+
 export async function callOpenRouterJson<T>({
   schema,
   messages,
   label,
+  plugins,
   temperature = 0.8,
 }: CallOpenRouterJsonOptions<T>) {
   const apiKey = requireEnv("OPENROUTER_API_KEY");
@@ -93,6 +121,7 @@ export async function callOpenRouterJson<T>({
         type: "json_object",
       },
       messages,
+      ...(plugins ? { plugins } : {}),
     }),
     cache: "no-store",
   });

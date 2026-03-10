@@ -99,6 +99,28 @@ async function postJson<T>(url: string, body: Record<string, string>) {
   return payload as T;
 }
 
+async function postForm<T>(url: string, body: { file: File; jobDescription?: string }) {
+  const formData = new FormData();
+  formData.append("file", body.file);
+
+  if (body.jobDescription) {
+    formData.append("jobDescription", body.jobDescription);
+  }
+
+  const response = await fetch(url, {
+    method: "POST",
+    body: formData,
+  });
+
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(payload.error ?? "The OCR analysis request failed.");
+  }
+
+  return payload as T;
+}
+
 export function AnalyzerPage({ mode }: AnalyzerPageProps) {
   const copy = MODE_COPY[mode];
   const [file, setFile] = useState<File | null>(null);
@@ -151,38 +173,69 @@ export function AnalyzerPage({ mode }: AnalyzerPageProps) {
 
     try {
       const manualText = cvTextOverride.trim();
-      let cvText = manualText;
       let source = "Manual CV text";
 
-      if (!manualText) {
-        const parsedCv = await parseCvFile(file);
-        setPreviewText(parsedCv.text.slice(0, 420));
+      if (manualText) {
+        setPreviewText(manualText.slice(0, 420));
 
-        if (parsedCv.quality === "low") {
+        const response = await postJson<AnalysisResult>(copy.endpoint, {
+          cvText: manualText,
+          cvFileName: file.name,
+          ...(mode === "job-fit" ? { jobDescription: jobDescription.trim() } : {}),
+        });
+
+        startTransition(() => {
+          setResult(response);
+          setSourceLabel(source);
+        });
+      } else {
+        let parsedCv: ParsedCv | null = null;
+        let shouldUseOcrFallback = false;
+
+        try {
+          parsedCv = await parseCvFile(file);
+          setPreviewText(parsedCv.text.slice(0, 420));
+
+          if (parsedCv.quality === "low") {
+            shouldUseOcrFallback = true;
+            setParseWarning(
+              `${parsedCv.warning ?? "Local extraction looked incomplete."} Switching to OCR fallback automatically.`,
+            );
+          }
+        } catch (parseError) {
+          shouldUseOcrFallback = true;
           setParseWarning(
-            parsedCv.warning ??
-              "The PDF text looks incomplete. Paste your CV manually below and rerun.",
+            parseError instanceof Error
+              ? `${parseError.message} Switching to OCR fallback automatically.`
+              : "Local extraction failed. Switching to OCR fallback automatically.",
           );
-          setSourceLabel("PDF extraction looked incomplete");
-          return;
         }
 
-        cvText = parsedCv.text;
-        source = `Parsed from ${parsedCv.pageCount} page PDF`;
-      } else {
-        setPreviewText(manualText.slice(0, 420));
+        if (shouldUseOcrFallback) {
+          const response = await postForm<AnalysisResult>(copy.endpoint, {
+            file,
+            ...(mode === "job-fit" ? { jobDescription: jobDescription.trim() } : {}),
+          });
+          source = "OpenRouter OCR fallback";
+
+          startTransition(() => {
+            setResult(response);
+            setSourceLabel(source);
+          });
+        } else if (parsedCv) {
+          const response = await postJson<AnalysisResult>(copy.endpoint, {
+            cvText: parsedCv.text,
+            cvFileName: file.name,
+            ...(mode === "job-fit" ? { jobDescription: jobDescription.trim() } : {}),
+          });
+          source = `Parsed from ${parsedCv.pageCount} page PDF`;
+
+          startTransition(() => {
+            setResult(response);
+            setSourceLabel(source);
+          });
+        }
       }
-
-      const response = await postJson<AnalysisResult>(copy.endpoint, {
-        cvText,
-        cvFileName: file.name,
-        ...(mode === "job-fit" ? { jobDescription: jobDescription.trim() } : {}),
-      });
-
-      startTransition(() => {
-        setResult(response);
-        setSourceLabel(source);
-      });
 
       window.requestAnimationFrame(() => {
         document.getElementById("analysis-results")?.scrollIntoView({
@@ -259,7 +312,7 @@ export function AnalyzerPage({ mode }: AnalyzerPageProps) {
             <FileUp size={18} />
             <div>
               <h2>Upload the CV</h2>
-              <p>PDF only for v1. If extraction looks thin, paste the text manually below.</p>
+              <p>PDF only for v1. We try local text extraction first, then switch to OCR fallback if the PDF is image-based or thin.</p>
             </div>
           </div>
 
@@ -278,19 +331,19 @@ export function AnalyzerPage({ mode }: AnalyzerPageProps) {
             <strong>{file ? file.name : "Choose your CV PDF"}</strong>
             <span>
               {file
-                ? "Locked in. If parsing goes weird, use the fallback text box below."
+                ? "Locked in. Manual text overrides OCR if you want full control."
                 : "Drag it in or click here. Keep it under 5 MB."}
             </span>
           </label>
 
           <label className="field-label" htmlFor="cv-fallback">
-            CV text fallback
+            CV text override
           </label>
           <textarea
             className="text-input text-input--large"
             id="cv-fallback"
             onChange={(event) => setCvTextOverride(event.target.value)}
-            placeholder="Optional but useful if the PDF is image-based or messy. Paste your CV text here to override extraction."
+            placeholder="Optional but useful if you want to override PDF extraction and OCR completely with your own cleaned CV text."
             value={cvTextOverride}
           />
 
