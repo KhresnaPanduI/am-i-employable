@@ -5,6 +5,7 @@ import { parsedCvSchema, type ParsedCv } from "@/lib/schemas";
 const require = createRequire(import.meta.url);
 const PAGE_MARKER_PATTERN = /--\s*\d+\s+of\s+\d+\s*--/gi;
 const LOW_CONFIDENCE_CHAR_THRESHOLD = 320;
+const globalPdfRuntime = globalThis as Record<string, unknown>;
 
 type PdfParseModule = {
   PDFParse: new (options: { data: Buffer }) => {
@@ -16,6 +17,12 @@ type PdfParseModule = {
   };
 };
 
+type CanvasRuntimeModule = {
+  DOMMatrix?: unknown;
+  ImageData?: unknown;
+  Path2D?: unknown;
+};
+
 export class PdfExtractionError extends Error {
   constructor(message: string) {
     super(message);
@@ -23,7 +30,32 @@ export class PdfExtractionError extends Error {
   }
 }
 
+function ensureCanvasRuntime() {
+  const needsDomMatrix = typeof globalPdfRuntime["DOMMatrix"] === "undefined";
+  const needsImageData = typeof globalPdfRuntime["ImageData"] === "undefined";
+  const needsPath2D = typeof globalPdfRuntime["Path2D"] === "undefined";
+
+  if (!needsDomMatrix && !needsImageData && !needsPath2D) {
+    return;
+  }
+
+  const canvas = require("@napi-rs/canvas") as CanvasRuntimeModule;
+
+  if (needsDomMatrix && canvas.DOMMatrix) {
+    globalPdfRuntime["DOMMatrix"] = canvas.DOMMatrix;
+  }
+
+  if (needsImageData && canvas.ImageData) {
+    globalPdfRuntime["ImageData"] = canvas.ImageData;
+  }
+
+  if (needsPath2D && canvas.Path2D) {
+    globalPdfRuntime["Path2D"] = canvas.Path2D;
+  }
+}
+
 function loadPdfParseModule() {
+  ensureCanvasRuntime();
   return require("pdf-parse") as PdfParseModule;
 }
 
@@ -81,3 +113,4 @@ export async function extractCvTextFromBuffer(buffer: Buffer): Promise<ParsedCv>
 export function isPdfUpload(fileName: string, mimeType?: string) {
   return fileName.toLowerCase().endsWith(".pdf") || mimeType === "application/pdf";
 }
+
