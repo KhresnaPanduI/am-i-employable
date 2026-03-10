@@ -49,7 +49,7 @@ Return JSON with this exact shape:
 Field requirements:
 - score: integer 0–100.
 - verdict: one sharp sentence. Make it memorable.
-- recruiterFirstImpression: simulate a 10-second CV scan. What lands, what doesn't.
+- recruiterFirstImpression: simulate a 10-second CV scan concisely. What lands, what doesn't.
 - strongestSignal: the single most compelling thing this CV communicates.
 - biggestRisk: the one thing most likely to cost them the interview — based only on skills, framing, or content gaps. Never dates or timelines.
 - mostFixableWeakness: a quick win that would meaningfully improve the CV.
