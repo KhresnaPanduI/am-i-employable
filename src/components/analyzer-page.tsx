@@ -63,6 +63,22 @@ const MODE_COPY = {
   },
 } as const;
 
+async function readApiPayload(response: Response) {
+  const text = await response.text();
+
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text) as { error?: string };
+  } catch {
+    return {
+      error: text,
+    };
+  }
+}
+
 async function parseCvFile(file: File) {
   const formData = new FormData();
   formData.append("file", file);
@@ -72,10 +88,10 @@ async function parseCvFile(file: File) {
     body: formData,
   });
 
-  const payload = await response.json();
+  const payload = await readApiPayload(response);
 
   if (!response.ok) {
-    throw new Error(payload.error ?? "Unable to read that PDF.");
+    throw new Error(payload?.error ?? `Unable to read that PDF (status ${response.status}).`);
   }
 
   return payload as ParsedCv;
@@ -90,10 +106,10 @@ async function postJson<T>(url: string, body: Record<string, string>) {
     body: JSON.stringify(body),
   });
 
-  const payload = await response.json();
+  const payload = await readApiPayload(response);
 
   if (!response.ok) {
-    throw new Error(payload.error ?? "The analysis request failed.");
+    throw new Error(payload?.error ?? `The analysis request failed (status ${response.status}).`);
   }
 
   return payload as T;
@@ -112,10 +128,10 @@ async function postForm<T>(url: string, body: { file: File; jobDescription?: str
     body: formData,
   });
 
-  const payload = await response.json();
+  const payload = await readApiPayload(response);
 
   if (!response.ok) {
-    throw new Error(payload.error ?? "The OCR analysis request failed.");
+    throw new Error(payload?.error ?? `The OCR analysis request failed (status ${response.status}).`);
   }
 
   return payload as T;

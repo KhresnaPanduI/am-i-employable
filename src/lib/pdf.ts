@@ -1,15 +1,30 @@
-import { PDFParse } from "pdf-parse";
+import { createRequire } from "node:module";
 
 import { parsedCvSchema, type ParsedCv } from "@/lib/schemas";
 
+const require = createRequire(import.meta.url);
 const PAGE_MARKER_PATTERN = /--\s*\d+\s+of\s+\d+\s*--/gi;
 const LOW_CONFIDENCE_CHAR_THRESHOLD = 320;
+
+type PdfParseModule = {
+  PDFParse: new (options: { data: Buffer }) => {
+    getText: () => Promise<{
+      text: string;
+      total: number;
+    }>;
+    destroy: () => Promise<void>;
+  };
+};
 
 export class PdfExtractionError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "PdfExtractionError";
   }
+}
+
+function loadPdfParseModule() {
+  return require("pdf-parse") as PdfParseModule;
 }
 
 export function sanitizeExtractedText(rawText: string) {
@@ -28,6 +43,7 @@ function getQualityWarning(text: string, pageCount: number) {
 }
 
 export async function extractCvTextFromBuffer(buffer: Buffer): Promise<ParsedCv> {
+  const { PDFParse } = loadPdfParseModule();
   const parser = new PDFParse({ data: buffer });
 
   try {
