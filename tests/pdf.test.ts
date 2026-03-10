@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 
@@ -22,6 +24,16 @@ describe("PDF extraction", () => {
 
     expect(parsed.text).toContain("analytics workflows");
     expect(parsed.pageCount).toBe(1);
+  });
+
+  it("extracts your real CV pdf as a healthy parse", async () => {
+    const pdfBuffer = await readFile("tests/Khresna Pandu I_CV.pdf");
+    const parsed = await extractCvTextFromBuffer(pdfBuffer);
+
+    expect(parsed.quality).toBe("ok");
+    expect(parsed.text).toContain("Khresna Pandu Izzaturrahman");
+    expect(parsed.text).toContain("Automation Anywhere");
+    expect(parsed.text.length).toBeGreaterThan(3000);
   });
 
   it("flags a blank pdf as unreadable", async () => {

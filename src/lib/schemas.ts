@@ -7,6 +7,25 @@ const trimmedString = (label: string, min = 1, max = 280) =>
     .min(min, `${label} is required.`)
     .max(max, `${label} must be ${max} characters or fewer.`);
 
+const boundedStringArray = (
+  label: string,
+  { min, max, itemMax }: { min: number; max: number; itemMax: number },
+) =>
+  z
+    .array(z.string())
+    .transform((items) =>
+      items
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .slice(0, max),
+    )
+    .pipe(
+      z
+        .array(trimmedString(label, 1, itemMax))
+        .min(min, `Provide at least ${min} ${label.toLowerCase()}${min > 1 ? "s" : ""}.`)
+        .max(max, `Provide at most ${max} ${label.toLowerCase()}${max > 1 ? "s" : ""}.`),
+    );
+
 const scoreSchema = z
   .number()
   .int()
@@ -39,20 +58,15 @@ export const generalAnalysisResultSchema = z.object({
   strongestSignal: trimmedString("Strongest signal", 1, 180),
   biggestRisk: trimmedString("Biggest risk", 1, 180),
   mostFixableWeakness: trimmedString("Most fixable weakness", 1, 180),
-  survivalTips: z
-    .array(trimmedString("Survival tip", 1, 140))
-    .min(2, "Provide at least two survival tips.")
-    .max(3, "Provide at most three survival tips."),
+  survivalTips: boundedStringArray("Survival tip", { min: 2, max: 3, itemMax: 140 }),
   rewrite: z.object({
     professionalSummary: trimmedString("Professional summary", 40, 500),
-    experienceBullets: z
-      .array(trimmedString("Experience bullet", 1, 180))
-      .min(3, "Provide at least three rewritten bullets.")
-      .max(4, "Provide at most four rewritten bullets."),
-    skillsSection: z
-      .array(trimmedString("Skill", 1, 60))
-      .min(4, "Provide at least four skills.")
-      .max(8, "Provide at most eight skills."),
+    experienceBullets: boundedStringArray("Experience bullet", {
+      min: 3,
+      max: 4,
+      itemMax: 180,
+    }),
+    skillsSection: boundedStringArray("Skill", { min: 4, max: 8, itemMax: 60 }),
   }),
   shareCard: shareCardSchema,
 });
@@ -61,34 +75,29 @@ export const jobFitAnalysisResultSchema = z.object({
   score: scoreSchema,
   verdict: trimmedString("Verdict", 1, 140),
   alignment: z.object({
-    strong: z
-      .array(trimmedString("Strong alignment skill", 1, 80))
-      .max(6, "Provide at most six strong matches."),
-    partial: z
-      .array(trimmedString("Partial alignment skill", 1, 80))
-      .max(6, "Provide at most six partial matches."),
-    missing: z
-      .array(trimmedString("Missing skill", 1, 80))
-      .max(6, "Provide at most six missing skills."),
-    missingKeywords: z
-      .array(trimmedString("Missing keyword", 1, 80))
-      .max(6, "Provide at most six missing keywords."),
+    strong: boundedStringArray("Strong alignment skill", { min: 0, max: 6, itemMax: 80 }),
+    partial: boundedStringArray("Partial alignment skill", { min: 0, max: 6, itemMax: 80 }),
+    missing: boundedStringArray("Missing skill", { min: 0, max: 6, itemMax: 80 }),
+    missingKeywords: boundedStringArray("Missing keyword", { min: 0, max: 6, itemMax: 80 }),
   }),
   gapAnalysis: trimmedString("Gap analysis", 60, 600),
   rewrite: z.object({
     professionalSummary: trimmedString("Professional summary", 40, 500),
-    experienceBullets: z
-      .array(trimmedString("Experience bullet", 1, 180))
-      .min(3, "Provide at least three rewritten bullets.")
-      .max(4, "Provide at most four rewritten bullets."),
-    keywordAdditions: z
-      .array(trimmedString("Keyword addition", 1, 100))
-      .min(3, "Provide at least three keyword additions.")
-      .max(6, "Provide at most six keyword additions."),
-    sectionReorder: z
-      .array(trimmedString("Section reorder note", 1, 120))
-      .min(2, "Provide at least two section ordering suggestions.")
-      .max(4, "Provide at most four section ordering suggestions."),
+    experienceBullets: boundedStringArray("Experience bullet", {
+      min: 3,
+      max: 4,
+      itemMax: 180,
+    }),
+    keywordAdditions: boundedStringArray("Keyword addition", {
+      min: 3,
+      max: 6,
+      itemMax: 100,
+    }),
+    sectionReorder: boundedStringArray("Section reorder note", {
+      min: 2,
+      max: 4,
+      itemMax: 120,
+    }),
   }),
   shareCard: shareCardSchema,
 });
