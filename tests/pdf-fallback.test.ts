@@ -15,22 +15,22 @@ describe("pdf fallback messaging", () => {
     ).toBe("We couldn't read that PDF.");
   });
 
-  it("uses an OCR fallback notice without telling the user to paste manually", () => {
+  it("uses a friendly fallback notice without telling the user to paste manually", () => {
     expect(
       buildOcrFallbackNotice(
         "We couldn't read that PDF. Paste your CV text manually and try again.",
       ),
-    ).toBe("We couldn't read that PDF. Trying OCR fallback automatically.");
+    ).toBe("We couldn't read that PDF. Trying another way to read your PDF...");
   });
 
-  it("only tells the user to paste manually after OCR fallback also fails", () => {
+  it("only tells the user to paste manually after both extraction methods fail", () => {
     expect(
       buildManualPasteAfterFallbackFailure(
         "We couldn't read that PDF. Paste your CV text manually and try again.",
         "OpenRouter timeout",
       ),
     ).toBe(
-      "We couldn't read that PDF. OCR fallback also failed. OpenRouter timeout. Paste your CV text manually and try again.",
+      "We couldn't read that PDF. Our backup reader also couldn't process it. OpenRouter timeout. Paste your CV text below and try again.",
     );
   });
 });

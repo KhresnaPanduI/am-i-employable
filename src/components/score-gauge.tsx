@@ -10,18 +10,9 @@ type ScoreGaugeProps = {
 };
 
 function getTone(score: number) {
-  if (score >= 80) {
-    return "strong";
-  }
-
-  if (score >= 60) {
-    return "mid";
-  }
-
-  if (score >= 40) {
-    return "warn";
-  }
-
+  if (score >= 80) return "strong";
+  if (score >= 60) return "mid";
+  if (score >= 40) return "warn";
   return "critical";
 }
 

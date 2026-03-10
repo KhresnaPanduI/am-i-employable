@@ -8,10 +8,10 @@ export function stripManualPasteInstruction(message: string) {
 
 export function buildOcrFallbackNotice(message?: string) {
   const summary = toSentence(
-    stripManualPasteInstruction(message ?? "We couldn't read that PDF locally."),
+    stripManualPasteInstruction(message ?? "We couldn't read that PDF"),
   );
 
-  return `${summary}. Trying OCR fallback automatically.`;
+  return `${summary}. Trying another way to read your PDF...`;
 }
 
 export function buildManualPasteAfterFallbackFailure(
@@ -19,9 +19,9 @@ export function buildManualPasteAfterFallbackFailure(
   ocrMessage?: string,
 ) {
   const parseSummary = toSentence(
-    stripManualPasteInstruction(parseMessage ?? "We couldn't finish reading that PDF automatically."),
+    stripManualPasteInstruction(parseMessage ?? "We couldn't read that PDF automatically"),
   );
   const ocrSummary = ocrMessage ? `${toSentence(ocrMessage)}. ` : "";
 
-  return `${parseSummary}. OCR fallback also failed. ${ocrSummary}Paste your CV text manually and try again.`;
+  return `${parseSummary}. Our backup reader also couldn't process it. ${ocrSummary}Paste your CV text below and try again.`;
 }

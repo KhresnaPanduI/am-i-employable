@@ -1,14 +1,7 @@
 import type { Metadata } from "next";
-import { Fraunces, IBM_Plex_Mono, Manrope } from "next/font/google";
-
-import { SiteHeader } from "@/components/site-header";
+import { IBM_Plex_Mono, Manrope } from "next/font/google";
 
 import "./globals.css";
-
-const headlineFont = Fraunces({
-  variable: "--font-headline",
-  subsets: ["latin"],
-});
 
 const bodyFont = Manrope({
   variable: "--font-body",
@@ -34,9 +27,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${headlineFont.variable} ${bodyFont.variable} ${monoFont.variable}`}>
+      <body className={`${bodyFont.variable} ${monoFont.variable}`}>
         <div className="site-shell">
-          <SiteHeader />
           {children}
         </div>
       </body>
