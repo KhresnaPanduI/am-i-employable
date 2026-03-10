@@ -7,6 +7,10 @@ import Link from "next/link";
 import { startTransition, useDeferredValue, useEffect, useRef, useState } from "react";
 
 import { AnalysisResults } from "@/components/analysis-results";
+import {
+  buildManualPasteAfterFallbackFailure,
+  buildOcrFallbackNotice,
+} from "@/lib/pdf-fallback";
 import type {
   GeneralAnalysisResult,
   JobFitAnalysisResult,
@@ -207,6 +211,7 @@ export function AnalyzerPage({ mode }: AnalyzerPageProps) {
       } else {
         let parsedCv: ParsedCv | null = null;
         let shouldUseOcrFallback = false;
+        let ocrFallbackReason: string | undefined;
 
         try {
           parsedCv = await parseCvFile(file);
@@ -214,30 +219,37 @@ export function AnalyzerPage({ mode }: AnalyzerPageProps) {
 
           if (parsedCv.quality === "low") {
             shouldUseOcrFallback = true;
-            setParseWarning(
-              `${parsedCv.warning ?? "Local extraction looked incomplete."} Switching to OCR fallback automatically.`,
-            );
+            ocrFallbackReason = parsedCv.warning ?? "Local extraction looked incomplete.";
+            setParseWarning(buildOcrFallbackNotice(ocrFallbackReason));
           }
         } catch (parseError) {
           shouldUseOcrFallback = true;
-          setParseWarning(
-            parseError instanceof Error
-              ? `${parseError.message} Switching to OCR fallback automatically.`
-              : "Local extraction failed. Switching to OCR fallback automatically.",
-          );
+          ocrFallbackReason =
+            parseError instanceof Error ? parseError.message : "Local extraction failed.";
+          setParseWarning(buildOcrFallbackNotice(ocrFallbackReason));
         }
 
         if (shouldUseOcrFallback) {
-          const response = await postForm<AnalysisResult>(copy.endpoint, {
-            file,
-            ...(mode === "job-fit" ? { jobDescription: jobDescription.trim() } : {}),
-          });
-          source = "OpenRouter OCR fallback";
+          try {
+            const response = await postForm<AnalysisResult>(copy.endpoint, {
+              file,
+              ...(mode === "job-fit" ? { jobDescription: jobDescription.trim() } : {}),
+            });
+            source = "OpenRouter OCR fallback";
+            setParseWarning(null);
 
-          startTransition(() => {
-            setResult(response);
-            setSourceLabel(source);
-          });
+            startTransition(() => {
+              setResult(response);
+              setSourceLabel(source);
+            });
+          } catch (ocrError) {
+            throw new Error(
+              buildManualPasteAfterFallbackFailure(
+                ocrFallbackReason,
+                ocrError instanceof Error ? ocrError.message : undefined,
+              ),
+            );
+          }
         } else if (parsedCv) {
           const response = await postJson<AnalysisResult>(copy.endpoint, {
             cvText: parsedCv.text,
