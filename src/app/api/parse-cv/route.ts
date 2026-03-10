@@ -37,6 +37,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json(parsedCv);
   } catch (error) {
+    console.error("[parse-cv] Failed to extract PDF text", {
+      fileName: file.name,
+      fileSize: file.size,
+      message: error instanceof Error ? error.message : String(error),
+    });
+
     const message =
       error instanceof PdfExtractionError
         ? error.message

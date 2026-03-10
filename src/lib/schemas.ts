@@ -1,11 +1,19 @@
 import { z } from "zod";
 
+const sanitizeGeneratedText = (value: string) => value.trim().replace(/\s+/g, " ");
+
 const trimmedString = (label: string, min = 1, max = 280) =>
   z
     .string()
     .trim()
     .min(min, `${label} is required.`)
     .max(max, `${label} must be ${max} characters or fewer.`);
+
+const generatedString = (label: string, min = 1, max = 280) =>
+  z
+    .string()
+    .transform((value) => sanitizeGeneratedText(value).slice(0, max))
+    .pipe(z.string().min(min, `${label} is required.`));
 
 const boundedStringArray = (
   label: string,
@@ -15,15 +23,14 @@ const boundedStringArray = (
     .array(z.string())
     .transform((items) =>
       items
-        .map((item) => item.trim())
+        .map((item) => sanitizeGeneratedText(item).slice(0, itemMax))
         .filter(Boolean)
         .slice(0, max),
     )
     .pipe(
       z
-        .array(trimmedString(label, 1, itemMax))
-        .min(min, `Provide at least ${min} ${label.toLowerCase()}${min > 1 ? "s" : ""}.`)
-        .max(max, `Provide at most ${max} ${label.toLowerCase()}${max > 1 ? "s" : ""}.`),
+        .array(z.string().min(1))
+        .min(min, `Provide at least ${min} ${label.toLowerCase()}${min > 1 ? "s" : ""}.`),
     );
 
 const scoreSchema = z
@@ -33,9 +40,9 @@ const scoreSchema = z
   .max(100, "Score must be at most 100.");
 
 export const shareCardSchema = z.object({
-  summary: trimmedString("Share summary", 1, 120),
-  strongestSignal: trimmedString("Share strongest signal", 1, 140),
-  topFix: trimmedString("Share top fix", 1, 140),
+  summary: generatedString("Share summary", 1, 120),
+  strongestSignal: generatedString("Share strongest signal", 1, 140),
+  topFix: generatedString("Share top fix", 1, 140),
 });
 
 export const analyzeGeneralRequestSchema = z.object({
@@ -49,18 +56,14 @@ export const analyzeJobFitRequestSchema = analyzeGeneralRequestSchema.extend({
 
 export const generalAnalysisResultSchema = z.object({
   score: scoreSchema,
-  verdict: trimmedString("Verdict", 1, 140),
-  recruiterFirstImpression: trimmedString(
-    "Recruiter first impression",
-    60,
-    600,
-  ),
-  strongestSignal: trimmedString("Strongest signal", 1, 180),
-  biggestRisk: trimmedString("Biggest risk", 1, 180),
-  mostFixableWeakness: trimmedString("Most fixable weakness", 1, 180),
+  verdict: generatedString("Verdict", 1, 140),
+  recruiterFirstImpression: generatedString("Recruiter first impression", 60, 600),
+  strongestSignal: generatedString("Strongest signal", 1, 180),
+  biggestRisk: generatedString("Biggest risk", 1, 180),
+  mostFixableWeakness: generatedString("Most fixable weakness", 1, 180),
   survivalTips: boundedStringArray("Survival tip", { min: 2, max: 3, itemMax: 140 }),
   rewrite: z.object({
-    professionalSummary: trimmedString("Professional summary", 40, 500),
+    professionalSummary: generatedString("Professional summary", 40, 500),
     experienceBullets: boundedStringArray("Experience bullet", {
       min: 3,
       max: 4,
@@ -73,16 +76,16 @@ export const generalAnalysisResultSchema = z.object({
 
 export const jobFitAnalysisResultSchema = z.object({
   score: scoreSchema,
-  verdict: trimmedString("Verdict", 1, 140),
+  verdict: generatedString("Verdict", 1, 140),
   alignment: z.object({
     strong: boundedStringArray("Strong alignment skill", { min: 0, max: 6, itemMax: 80 }),
     partial: boundedStringArray("Partial alignment skill", { min: 0, max: 6, itemMax: 80 }),
     missing: boundedStringArray("Missing skill", { min: 0, max: 6, itemMax: 80 }),
     missingKeywords: boundedStringArray("Missing keyword", { min: 0, max: 6, itemMax: 80 }),
   }),
-  gapAnalysis: trimmedString("Gap analysis", 60, 600),
+  gapAnalysis: generatedString("Gap analysis", 60, 600),
   rewrite: z.object({
-    professionalSummary: trimmedString("Professional summary", 40, 500),
+    professionalSummary: generatedString("Professional summary", 40, 500),
     experienceBullets: boundedStringArray("Experience bullet", {
       min: 3,
       max: 4,

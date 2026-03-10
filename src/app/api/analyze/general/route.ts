@@ -9,6 +9,10 @@ export const runtime = "nodejs";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
+function formatZodError(error: ZodError) {
+  return error.issues.map((issue) => issue.message).join(" ");
+}
+
 export async function POST(request: Request) {
   const contentType = request.headers.get("content-type") ?? "";
 
@@ -38,7 +42,7 @@ export async function POST(request: Request) {
     } catch (error) {
       if (error instanceof ZodError) {
         return NextResponse.json(
-          { error: error.issues[0]?.message ?? "Invalid OCR analysis request." },
+          { error: formatZodError(error) || "Invalid OCR analysis request." },
           { status: 400 },
         );
       }
@@ -62,7 +66,7 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json(
-        { error: error.issues[0]?.message ?? "Invalid analysis request." },
+        { error: formatZodError(error) || "Invalid analysis request." },
         { status: 400 },
       );
     }
@@ -74,6 +78,13 @@ export async function POST(request: Request) {
     const result = await analyzeGeneralCv(payload);
     return NextResponse.json(result);
   } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { error: formatZodError(error) || "Model output did not match the expected format." },
+        { status: 400 },
+      );
+    }
+
     return NextResponse.json(
       {
         error:
