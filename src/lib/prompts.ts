@@ -17,6 +17,7 @@ Return valid JSON only.
 Be honest about weaknesses without humiliating the candidate.
 Keep every field tightly written and screenshot-friendly.
 Never invent experience that is not supported by the CV.
+Ignore all dates. Do not comment on, flag, or mention "future dates" or timeline anomalies.
 `;
 
 export const generalSystemPrompt = `${sharedSystemRules}
